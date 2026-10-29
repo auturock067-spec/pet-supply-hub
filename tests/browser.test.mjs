@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
+import {mkdir} from 'node:fs/promises';
 import {createStaticServer} from '../scripts/serve.mjs';
 const widths=[320,390,768,1440];
 test('mobile/desktop English & Chinese, images, live filters and privacy-safe RFQ export',async t=>{
@@ -8,6 +9,7 @@ test('mobile/desktop English & Chinese, images, live filters and privacy-safe RF
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  const port=server.address().port,base='http://127.0.0.1:'+port;
  const browser=await chromium.launch({headless:true});
+ await mkdir('artifacts',{recursive:true});
  try{
   for(const width of widths){
    await t.test(width+'px',async()=>{
@@ -57,12 +59,14 @@ test('mobile/desktop English & Chinese, images, live filters and privacy-safe RF
      const pending=page.waitForEvent('download');
      await page.locator('#download').click();
      const dl=await pending;assert.equal(dl.suggestedFilename(),'petsupplyhub-bilingual-rfq.txt');
+     await page.screenshot({path:'artifacts/petsupply-zh-'+width+'.png',fullPage:true});
      await page.locator('#language-toggle').click();
      assert.equal(await page.locator('html').getAttribute('lang'),'en');
      assert.equal(await page.locator('input[name=size]').inputValue(),'60 x 40 cm');
      const geometry=await page.evaluate(()=>({client:document.documentElement.clientWidth,scroll:document.documentElement.scrollWidth}));
      assert.ok(geometry.scroll<=geometry.client+1,'Horizontal overflow '+JSON.stringify(geometry));
      assert.deepEqual(errors,[]);assert.deepEqual(outbound,[],'unexpected remote requests');
+     await page.screenshot({path:'artifacts/petsupply-en-'+width+'.png',fullPage:true});
     }finally{await page.close()}
    });
   }
