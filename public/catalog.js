@@ -1,0 +1,41 @@
+export const categories=[
+ {id:'walking',en:'Walking & control',zh:'牵引与出行'},
+ {id:'rest',en:'Rest & comfort',zh:'休息与舒适'},
+ {id:'feeding',en:'Feeding accessories',zh:'喂食用品'},
+ {id:'play',en:'Play & enrichment',zh:'玩耍与互动'},
+ {id:'grooming',en:'Grooming tools',zh:'清洁梳理'},
+ {id:'travel',en:'Travel & carriers',zh:'携带与运输'}
+];
+export const products=[
+ {id:'collar-leash',category:'walking',en:'Adjustable collar & leash set',zh:'可调节项圈与牵引绳',
+  summary:['A size-specific walking accessory; construction and closure details matter.','需按宠物体型选择的出行用品；结构与扣具细节十分重要。'],
+  focus:['Adjustable circumference, webbing width, buckles, stitching, hardware and target dog size.','可调节周长、织带宽度、卡扣、缝线、五金件及适用犬只体型。'],
+  caution:['Request documented testing scope; do not infer strength or safe fit from a photograph.','索取可核实的检测范围，不要仅凭照片判断强度或佩戴安全性。'],
+  tags:['webbing','adjustable','hardware','织带','可调','五金']},
+ {id:'pet-bed',category:'rest',en:'Washable pet bed',zh:'可清洗宠物窝垫',
+  summary:['A padded resting surface in different sizes and cover constructions.','具有不同尺寸及面套结构的软垫式宠物休息用品。'],
+  focus:['Overall size, filling, detachable cover, care instructions, seam construction and materials.','外部尺寸、填充物、可拆洗面套、洗护说明、缝制结构及材料。'],
+  caution:['Claims about materials, washability and durability should match the exact design and evidence.','材料、可清洗性和耐用性等声明须对应具体设计与证据。'],
+  tags:['fabric','washable','bedding','面料','可清洗','窝垫']},
+ {id:'feeding-bowl',category:'feeding',en:'Stainless steel feeding bowl',zh:'不锈钢宠物食盆',
+  summary:['An everyday feeding accessory with material and finish questions.','需要关注材料和表面处理的常用宠物喂食用品。'],
+  focus:['Capacity, dimensions, stated material grade, surface finish, base design and cleaning method.','容量、尺寸、标称材质牌号、表面处理、底座设计及清洁方式。'],
+  caution:['Request material identity and relevant documentation; do not assume food-contact compliance.','要求确认材料身份及相关文件，不应自行推断其符合食品接触要求。'],
+  tags:['steel','bowl','feeding','stainless','不锈钢','食盆']},
+ {id:'rope-toy',category:'play',en:'Braided rope toy',zh:'编织绳玩具',
+  summary:['A textile pet-play item that needs age/size guidance and material checks.','需要明确适用体型、年龄及材料的纺织类宠物玩具。'],
+  focus:['Length, diameter, fibre composition, dye/colour, construction and intended animal size.','长度、直径、纤维成分、染色方式、结构及适用宠物体型。'],
+  caution:['Ask about loose pieces and intended supervised use; not all toys suit every animal.','关注散落部件和建议的看护使用情形；并非所有玩具都适合所有宠物。'],
+  tags:['rope','cotton','play','textile','绳','棉','玩具']},
+ {id:'grooming-brush',category:'grooming',en:'Pet grooming brush',zh:'宠物梳毛刷',
+  summary:['A coat-care accessory whose pin geometry and ergonomics vary by use.','刷针结构和握持设计因使用场景而异的毛发护理工具。'],
+  focus:['Brush dimensions, bristle material, pin tip, handle grip, coat-type suitability and cleaning.','刷体尺寸、刷毛材料、针头形式、手柄握持、适用毛发类型及清洁方式。'],
+  caution:['Do not imply the brush is suitable for sensitive skin without validation.','未经验证，不应宣称适合敏感皮肤或所有宠物。'],
+  tags:['brush','coat','grooming','梳毛','刷','护理']},
+ {id:'pet-carrier',category:'travel',en:'Soft-sided pet carrier',zh:'软包式宠物携带箱',
+  summary:['A temporary transport carrier with ventilation, closure and size considerations.','需要关注通风、闭合装置和尺寸的短途携宠用品。'],
+  focus:['Internal/external measurements, pet weight guidance, mesh, zipper/closure, handles and ventilation.','内部与外部尺寸、建议宠物体重、网面、拉链锁扣、提手及通风设计。'],
+  caution:['Carrier or airline acceptance is not guaranteed; check each operator and destination.','不保证符合航空公司或承运方要求；须逐一核实承运规则及目的地要求。'],
+  tags:['carrier','mesh','travel','airline','宠物包','出行','运输']}
+];
+export const getProduct=id=>products.find(x=>x.id===id);
