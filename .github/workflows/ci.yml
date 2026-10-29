@@ -34,3 +34,11 @@ jobs:
         run: npm run build
       - name: English/Chinese responsive browser tests
         run: npm run test:browser
+      - name: Save bilingual viewport screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: petsupply-v0.1-viewport-evidence
+          path: artifacts/
+          if-no-files-found: ignore
+          retention-days: 30
