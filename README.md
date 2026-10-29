@@ -23,7 +23,7 @@ npm test
 npm run dev
 ```
 
-Then open `http://127.0.0.1:4173/?lang=zh`. For Chromium integration tests, install the pinned test dependency in your Home Laptop project folder when needed: `npm install --no-save --no-package-lock playwright@1.56.1`, `npx playwright install chromium`, and `npm run test:browser`. Node 22+ recommended, Node 24 used in CI.
+Then open `http://127.0.0.1:4173/?lang=zh`. For Chromium integration tests, run `npm ci`, `npx playwright install chromium`, then `npm run test:browser`. Playwright 1.58.2 and axe 4.11.1 are pinned in the lockfile. Set PLAYWRIGHT_BROWSERS_PATH to D:\AgentForge\cache\playwright on the Home Laptop. Node 24 is used in CI.
 
 ## Build & Cloudflare
 
@@ -38,3 +38,7 @@ Then open `http://127.0.0.1:4173/?lang=zh`. For Chromium integration tests, inst
 Pet food, medication and veterinary medical devices are excluded. No medical/legal/compliance guarantee is made; buyer must verify exact manufacturer models, test scope, physical fit and applicable market/transport requirements. No live supplier listings, inventory, purchase orders, accounts, contact capture or payment.
 
 Source of truth is **GitHub**. This is the Home Laptop project; do not modify the three Work Computer industry sites as part of its development.
+
+## Owner-private online review
+
+The separate Sites review edition preserves owner-private access and noindex. See docs/DEPLOYMENT.md for the persisted project identity, exact-source publishing and update/rollback procedure. It does not complete Cloudflare Git authorization. Local acceptance: 4 structural and 12 browser tests passed; 320/390/768/1440, English/Chinese, two axe scans. Hosting and CI results are recorded separately after actual verification.

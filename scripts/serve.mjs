@@ -3,7 +3,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {resolve,sep,extname} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const base=resolve(fileURLToPath(new URL('../dist/',import.meta.url)));
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.txt':'text/plain; charset=utf-8'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.txt':'text/plain; charset=utf-8','.json':'application/json'};
 export function createStaticServer(){
  return createServer(async(req,res)=>{
   const basePath=new URL(req.url||'/', 'http://localhost').pathname;
@@ -15,8 +15,8 @@ export function createStaticServer(){
    const s=await stat(path);if(!s.isFile())throw new Error('not file');
    const content=await readFile(path);
    res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream',
-    'x-content-type-options':'nosniff',
-    'content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'"});
+    'x-content-type-options':'nosniff','x-robots-tag':'noindex, nofollow','referrer-policy':'strict-origin-when-cross-origin',
+    'content-security-policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'none'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'; object-src 'none'"});
    res.end(req.method==='HEAD'?undefined:content);
   }catch{res.writeHead(404,{'content-type':'text/plain; charset=utf-8'});res.end('Not found')}
  });

@@ -1,169 +1,35 @@
 import {categories,products,getProduct} from './catalog.js';
-const $=selector=>document.querySelector(selector);
-const tr=(en,zh)=>lang==='zh'?zh:en;
-const local=i=>Array.isArray(i)?i[lang==='zh'?1:0]:i;
-const escapeHTML=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const ui={
-  langToggle:$('#language-toggle'),search:$('#product-search'),filters:$('#filters'),
-  grid:$('#product-grid'),results:$('#results'),empty:$('#empty'),
-  rfq:$('#rfq-form'),product:$('#rfq-product'),out:$('#rfq-output'),
-  rfqStatus:$('#rfq-status'),copy:$('#copy'),download:$('#download')
-};
-let lang='en';
-let filter='all';
-let brief='';
-function translateStatic(){
-  document.documentElement.lang=lang==='zh'?'zh-CN':'en';
-  for(const element of document.querySelectorAll('[data-en][data-zh]')){
-    element.textContent=element.getAttribute(lang==='zh'?'data-zh':'data-en');
-  }
-  ui.langToggle.textContent=lang==='zh'?'English':'中文';
-  ui.langToggle.setAttribute('aria-label',lang==='zh'?'Switch to English':'切换为中文');
-  ui.search.placeholder=tr('Search category, material or specification…','搜索品类、材料或规格……');
-  ui.search.setAttribute('aria-label',tr('Search product references','搜索产品参考'));
-  ui.filters.setAttribute('aria-label',tr('Filter products','筛选产品'));
-  for(const [selector,en,zh] of [['.hero-visual img','Illustration of a washable pet bed','可清洗宠物窝垫示意图'],
-    ['.guide:nth-child(1) img','Illustration of collar and leash','项圈与牵引绳示意图'],
-    ['.guide:nth-child(2) img','Illustration of pet feeding bowls','宠物食盆示意图'],
-    ['.guide:nth-child(3) img','Illustration of pet carrier','宠物携带箱示意图']]){
-    $(selector)?.setAttribute('alt',tr(en,zh));
-  }
-  for(const input of ui.rfq.querySelectorAll('input[placeholder],textarea[placeholder]')){
-    const map={size:['e.g. 45 × 35 cm','例如 45 × 35 厘米'],material:['e.g. stainless steel grade to confirm','例如不锈钢，牌号待确认'],
-      quantity:['e.g. 300','例如 300'],market:['e.g. Canada','例如加拿大'],notes:['Sample policy, model/lot details, testing documents…','样品政策、型号或批次信息、检测文件……']};
-    if(map[input.name])input.placeholder=local(map[input.name]);
-  }
-  for(const option of ui.rfq.querySelectorAll('option[data-en][data-zh]')) option.textContent=option.getAttribute(lang==='zh'?'data-zh':'data-en');
-  if(brief) ui.rfqStatus.textContent=tr('Previous brief is available. Regenerate after editing.','上次清单仍可查看；修改后请重新生成。');
-  renderFilters();renderProducts();populateProductSelect();
+import {site} from './site.js';
+const $=s=>document.querySelector(s),esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let lang='en',filter='all',brief='';
+const tr=(en,zh)=>lang==='zh'?zh:en,local=v=>Array.isArray(v)?v[lang==='zh'?1:0]:v;
+const ui={langToggle:$('#language-toggle'),search:$('#product-search'),filters:$('#filters'),grid:$('#product-grid'),results:$('#results'),empty:$('#empty'),rfq:$('#rfq-form'),product:$('#rfq-product'),out:$('#rfq-output'),status:$('#rfq-status'),copy:$('#copy'),download:$('#download')};
+const controls=()=>[...ui.rfq.querySelectorAll('input[name],select[name],textarea[name]')];
+function invalidate(){if(!brief)return;brief='';ui.out.hidden=true;ui.copy.disabled=ui.download.disabled=true;ui.status.textContent=tr('Requirements changed. Generate a new brief before exporting.','需求已修改，请重新生成后再导出。');}
+function translate(){
+ document.documentElement.lang=lang==='zh'?'zh-CN':'en';document.title=local(site.title);document.querySelector('meta[name=description]').content=local(site.description);
+ for(const el of document.querySelectorAll('[data-en][data-zh]'))el.textContent=el.getAttribute(lang==='zh'?'data-zh':'data-en');
+ ui.langToggle.textContent=tr('中文','English');ui.langToggle.setAttribute('aria-label',tr('Switch to Chinese','Switch to English'));
+ ui.search.placeholder=tr('Search category, material or specification…','搜索品类、材料或规格……');ui.search.setAttribute('aria-label',tr('Search product references','搜索产品参考'));ui.filters.setAttribute('aria-label',tr('Filter products','筛选产品'));
+ for(const [selector,alts] of Object.entries(site.imageAlts||{}))$(selector)?.setAttribute('alt',local(alts));
+ for(const el of controls())if(site.placeholders?.[el.name])el.placeholder=local(site.placeholders[el.name]);
+ renderFilters();renderProducts();populateProducts();if(brief)ui.status.textContent=tr('Your bilingual brief is ready. Nothing has been submitted.','中英文需求书已生成，未提交任何数据。');
 }
-function renderFilters(){
-  const items=[{id:'all',en:'All products',zh:'全部产品'},...categories];
-  ui.filters.replaceChildren(...items.map(c=>{
-    const button=document.createElement('button');
-    button.type='button';button.className='chip';
-    button.textContent=lang==='zh'?c.zh:c.en;
-    button.dataset.filter=c.id;
-    button.setAttribute('aria-pressed',String(c.id===filter));
-    button.addEventListener('click',()=>{filter=c.id;renderFilters();renderProducts()});
-    return button;
-  }));
-}
-function searchText(product){
-  const category=categories.find(c=>c.id===product.category);
-  return [product.en,product.zh,category.en,category.zh,...product.summary,...product.focus,...product.tags]
-    .join(' ').toLocaleLowerCase();
-}
+function renderFilters(){ui.filters.replaceChildren(...[{id:'all',en:'All products',zh:'全部产品'},...categories].map(c=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=tr(c.en,c.zh);b.dataset.filter=c.id;b.setAttribute('aria-pressed',String(c.id===filter));b.addEventListener('click',()=>{filter=c.id;renderFilters();renderProducts();ui.filters.querySelector(`[data-filter="${c.id}"]`).focus();});return b;}));}
 function renderProducts(){
-  const term=ui.search.value.trim().toLocaleLowerCase();
-  const matches=products.filter(p=>(filter==='all'||p.category===filter)&&searchText(p).includes(term));
-  ui.grid.innerHTML=matches.map((p)=>{
-    const category=categories.find(c=>c.id===p.category);
-    return '<article class="product-card" data-product="'+escapeHTML(p.id)+'">'+
-      '<div class="product-image"><img src="./assets/'+escapeHTML(p.id)+'.svg" alt="'+escapeHTML(tr(p.en,p.zh))+'" width="800" height="480" loading="lazy" decoding="async"></div>'+
-      '<div class="product-info"><small class="product-label">'+escapeHTML(tr(category.en,category.zh))+'</small>'+
-      '<h3>'+escapeHTML(tr(p.en,p.zh))+'</h3>'+
-      '<p>'+escapeHTML(local(p.summary))+'</p>'+
-      '<div class="product-focus"><b>'+tr('Specification focus','规格关注')+'</b><span>'+escapeHTML(local(p.focus))+'</span></div>'+
-      '<p class="product-caution">'+escapeHTML(local(p.caution))+'</p>'+
-      '<button class="text-action" type="button" data-pick="'+escapeHTML(p.id)+'">'+tr('Use in RFQ →','添加至询价清单 →')+'</button></div></article>';
-  }).join('');
-  ui.empty.hidden=matches.length!==0;
-  ui.results.textContent=tr(matches.length+' product '+(matches.length===1?'reference':'references')+' shown','显示 '+matches.length+' 项产品参考');
-  for(const button of ui.grid.querySelectorAll('[data-pick]'))button.addEventListener('click',()=>{
-    ui.product.value=button.dataset.pick;
-    $('#rfq').scrollIntoView({behavior:'smooth',block:'start'});
-    ui.product.focus({preventScroll:true});
-  });
+ const term=ui.search.value.trim().toLocaleLowerCase(),matches=products.filter(p=>{const c=categories.find(c=>c.id===p.category);return (filter==='all'||p.category===filter)&&[p.en,p.zh,c.en,c.zh,...p.summary,...p.focus,...p.tags].join(' ').toLocaleLowerCase().includes(term);});
+ ui.grid.innerHTML=matches.map(p=>{const c=categories.find(c=>c.id===p.category);return `<article class="product-card" data-product="${esc(p.id)}"><div class="product-image"><img src="./assets/${esc(p.id)}.svg" alt="${esc(tr(p.en,p.zh))}" width="800" height="480" loading="lazy" decoding="async"></div><div class="product-info"><small class="product-label">${esc(tr(c.en,c.zh))}</small><h3>${esc(tr(p.en,p.zh))}</h3><p>${esc(local(p.summary))}</p><div class="product-focus"><b>${tr('Specification focus','规格关注')}</b><span>${esc(local(p.focus))}</span></div><p class="product-caution">${esc(local(p.caution))}</p><button class="text-action" type="button" data-pick="${esc(p.id)}">${tr('Use in RFQ →','添加至询价清单 →')}</button></div></article>`;}).join('');
+ ui.empty.hidden=matches.length!==0;ui.results.textContent=tr(`${matches.length} product ${matches.length===1?'reference':'references'} shown`,`显示 ${matches.length} 项产品参考`);
+ for(const b of ui.grid.querySelectorAll('[data-pick]'))b.addEventListener('click',()=>{invalidate();ui.product.value=b.dataset.pick;$('#rfq').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});ui.product.focus({preventScroll:true});});
 }
-function populateProductSelect(){
-  const value=ui.product.value;
-  ui.product.querySelectorAll('option:not([value=""])').forEach(x=>x.remove());
-  for(const p of products){
-    const option=document.createElement('option');option.value=p.id;option.textContent=tr(p.en,p.zh);
-    ui.product.append(option);
-  }
-  if(value && getProduct(value))ui.product.value=value;
-}
-function setLang(value,save){
-  lang=value==='zh'?'zh':'en';translateStatic();
-  if(save){
-    try{localStorage.setItem('petsupply-language',lang)}catch{}
-    const url=new URL(location.href);url.searchParams.set('lang',lang);history.replaceState(null,'',url);
-  }
-}
-function readForm(){
-  const fields=['product','animal','size','material','quantity','market','notes'];
-  const out={};for(const key of fields)out[key]=String(ui.rfq.elements.namedItem(key)?.value??'').trim();
-  return out;
-}
-function validate(d){
-  const problems=[];
-  for(const key of ['product','animal','size','material','quantity','market'])if(!d[key])problems.push(key);
-  if(d.product&&!getProduct(d.product))problems.push('product');
-  if(d.quantity&&!/^[1-9]\d*$/.test(d.quantity))problems.push('quantity');
-  if(d.quantity&&Number(d.quantity)>1000000)problems.push('quantity');
-  for(const key of ['size','material','market'])if(d[key]?.length>140)problems.push(key);
-  const invalid=new Set(problems);
-  for(const key of ['product','animal','size','material','quantity','market'])ui.rfq.elements.namedItem(key)?.setAttribute('aria-invalid',String(invalid.has(key)));
-  return [...invalid];
-}
-function buildBrief(d){
-  const p=getProduct(d.product);
-  const animal={dog:['Dog','犬'],cat:['Cat','猫'],other:['Other (detail in notes)','其他（见备注）']}[d.animal]||[d.animal,d.animal];
-  const line=(k,a,b)=>[k+': '+a,k+'：'+b];
-  const en=[
-    'PETSUPPLYHUB — BUYER SOURCING BRIEF',
-    'Draft prepared locally. Not sent, quoted, endorsed or certified.',
-    'Product: '+p.en,'Animal / species: '+animal[0],
-    'Size / dimensions: '+d.size,'Material / construction: '+d.material,
-    'Quantity: '+d.quantity+' pcs','Destination market: '+d.market,
-    'Notes: '+(d.notes||'To confirm with manufacturer'),
-    'Supplier questions: '+p.focus[0],
-    'Risk reminder: '+p.caution[0],
-    'Confirm exact model, construction, tests and destination regulations before buying.'
-  ];
-  const zh=[
-    'PETSUPPLYHUB — 采购需求核对清单',
-    '此清单仅在浏览器本地生成，并未发送、报价、背书或认证。',
-    '产品：'+p.zh,'适用宠物：'+animal[1],
-    '尺寸或规格：'+d.size,'材料与结构：'+d.material,
-    '数量：'+d.quantity+' 件','目标市场：'+d.market,
-    '备注：'+(d.notes||'待与制造商确认'),
-    '需向供应商核实：'+p.focus[1],
-    '风险提示：'+p.caution[1],
-    '采购前须核实准确型号、结构、检测文件及目的地法规。'
-  ];
-  return en.join('\n')+'\n\n'+'='.repeat(42)+'\n\n'+zh.join('\n');
-}
-ui.rfq.addEventListener('submit',event=>{
-  event.preventDefault();
-  const data=readForm(),invalid=validate(data);
-  if(invalid.length){
-    const labels={product:['product type','产品类型'],animal:['animal','宠物类型'],size:['size','尺寸'],material:['material','材料'],quantity:['quantity','数量'],market:['destination','目标市场']};
-    ui.rfqStatus.textContent=tr('Please complete or correct: ','请补全或更正：')+invalid.map(k=>local(labels[k])).join(tr(', ','、'));
-    ui.out.hidden=true;brief='';ui.copy.disabled=ui.download.disabled=true;
-    ui.rfq.elements.namedItem(invalid[0])?.focus();return;
-  }
-  brief=buildBrief(data);ui.out.textContent=brief;ui.out.hidden=false;
-  ui.copy.disabled=ui.download.disabled=false;
-  ui.rfqStatus.textContent=tr('Brief created locally. Nothing was submitted.','本地生成完成，未提交任何数据。');
-});
-ui.copy.addEventListener('click',async()=>{
-  if(!brief)return;
-  try{await navigator.clipboard.writeText(brief);ui.rfqStatus.textContent=tr('Copied. No data sent.','已复制，没有发送数据。')}
-  catch{ui.rfqStatus.textContent=tr('Clipboard unavailable. Select the brief below to copy manually.','剪贴板不可用，请手动选中下方清单并复制。')}
-});
-ui.download.addEventListener('click',()=>{
-  if(!brief)return;
-  const blob=new Blob(['\uFEFF',brief],{type:'text/plain;charset=utf-8'});
-  const url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download='petsupplyhub-bilingual-rfq.txt';a.hidden=true;
-  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-  ui.rfqStatus.textContent=tr('Text file prepared. Nothing was submitted.','文本已生成，未提交任何数据。');
-});
-ui.search.addEventListener('input',renderProducts);
-ui.langToggle.addEventListener('click',()=>setLang(lang==='en'?'zh':'en',true));
-let preferred='en';try{preferred=localStorage.getItem('petsupply-language')||'en'}catch{}
-const requested=new URL(location.href).searchParams.get('lang');
-setLang(requested==='zh'||requested==='en'?requested:preferred,false);
+function populateProducts(){const current=ui.product.value;ui.product.querySelectorAll('option:not([value=""])').forEach(o=>o.remove());for(const p of products){const o=document.createElement('option');o.value=p.id;o.textContent=tr(p.en,p.zh);o.dataset.en=p.en;o.dataset.zh=p.zh;ui.product.append(o);}if(getProduct(current))ui.product.value=current;}
+function setLang(value,save=false){lang=value==='zh'?'zh':'en';translate();if(save){try{localStorage.setItem(site.storageKey,lang);}catch{}const url=new URL(location.href);url.searchParams.set('lang',lang);history.replaceState(null,'',url);}}
+function formData(){return Object.fromEntries(controls().map(el=>[el.name,el.type==='checkbox'?(el.checked?'yes':''):el.value.trim()]));}
+function validate(data){const invalid=[];for(const el of controls()){let bad=(el.required&&!data[el.name])||!el.checkValidity();if(el.tagName==='SELECT'&&data[el.name]&&![...el.options].some(o=>o.value===data[el.name]))bad=true;if(el.maxLength>0&&data[el.name].length>el.maxLength)bad=true;if(el.name==='product'&&data.product&&!getProduct(data.product))bad=true;if(el.name==='quantity'&&data.unit&&data.unit!=='kg'&&!Number.isInteger(Number(data.quantity)))bad=true;el.setAttribute('aria-invalid',String(Boolean(bad)));if(bad)invalid.push(el);}return invalid;}
+function fieldText(el,data,language){const value=data[el.name];if(el.name==='product'){const p=getProduct(value);return language==='en'?p.en:p.zh;}if(el.tagName==='SELECT'){const o=el.selectedOptions[0];return o?.getAttribute(`data-${language}`)||o?.textContent||value;}return value||(language==='en'?'Not specified — to confirm':'未填写 — 待确认');}
+function buildBrief(data){const p=getProduct(data.product);return ['en','zh'].map(language=>{const english=language==='en',rows=[site.brand+' — '+(english?'BUYER SOURCING BRIEF':'采购需求书'),english?'Prepared locally. Nothing has been submitted, quoted, endorsed or certified.':'仅在浏览器本地生成，未提交、未报价、未背书或认证。',''];for(const el of controls().filter(el=>el.type!=='checkbox')){const label=el.closest('label')?.querySelector('[data-en]'),name=(label?.getAttribute(`data-${language}`)||el.name).replace(/\s*\*\s*$/,'');rows.push(name+(english?': ':'：')+fieldText(el,data,language));}rows.push('',(english?'Supplier questions: ':'需向供应商核实：')+p.focus[english?0:1],(english?'Check: ':'核对提示：')+p.caution[english?0:1],english?'Confirm the actual model/lot, sample terms, MOQ, specifications, documents, quote validity, delivery responsibilities and substitutions before buying. This brief is not a purchase commitment.':'采购前确认实际型号/批次、样品条款、MOQ、规格、文件、报价有效期、交付责任及换批规则。本需求书不构成采购承诺。');return rows.join('\n');}).join('\n\n'+'='.repeat(42)+'\n\n');}
+ui.rfq.addEventListener('submit',event=>{event.preventDefault();const data=formData(),invalid=validate(data);if(invalid.length){brief='';ui.out.hidden=true;ui.copy.disabled=ui.download.disabled=true;ui.status.textContent=tr('Please complete or correct: ','请补全或更正：')+invalid.map(el=>el.closest('label')?.querySelector('[data-en]')?.getAttribute(`data-${lang}`)||el.name).join(tr(', ','、'));invalid[0].focus();return;}brief=buildBrief(data);ui.out.textContent=brief;ui.out.hidden=false;ui.copy.disabled=ui.download.disabled=false;ui.status.textContent=tr('Brief created locally. Nothing was submitted.','本地生成完成，未提交任何数据。');});
+ui.rfq.addEventListener('input',invalidate);ui.rfq.addEventListener('change',invalidate);
+ui.copy.addEventListener('click',async()=>{if(!brief)return;try{await navigator.clipboard.writeText(brief);ui.status.textContent=tr('Copied. No data sent.','已复制，没有发送数据。');}catch{const r=document.createRange();r.selectNodeContents(ui.out);const s=getSelection();s.removeAllRanges();s.addRange(r);ui.out.focus();ui.status.textContent=tr('Clipboard unavailable. The brief is selected; use your device’s copy command.','剪贴板不可用。清单已选中，请使用设备的复制功能。');}});
+ui.download.addEventListener('click',()=>{if(!brief)return;const url=URL.createObjectURL(new Blob(['\uFEFF',brief],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=site.download;a.hidden=true;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);ui.status.textContent=tr('Download requested. Nothing was submitted.','已请求下载，未提交任何数据。');});
+ui.search.addEventListener('input',renderProducts);ui.langToggle.addEventListener('click',()=>setLang(lang==='en'?'zh':'en',true));let preferred='en';try{preferred=localStorage.getItem(site.storageKey)||'en';}catch{}const requested=new URL(location.href).searchParams.get('lang');setLang(['en','zh'].includes(requested)?requested:preferred);

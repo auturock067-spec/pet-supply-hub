@@ -1,4 +1,4 @@
-name: PetSupplyHub V0.1 verification
+name: Home site acceptance
 on:
   push:
     branches: [main, 'feat/**']
@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  site:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -14,31 +14,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Generate static site
-        run: npm run build
-      - name: Verify source and safety controls
-        run: npm test
-  browser:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-      - name: Install pinned Chromium
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.1
-          npx playwright install --with-deps chromium
-      - name: Build site
-        run: npm run build
-      - name: English/Chinese responsive browser tests
-        run: npm run test:browser
-      - name: Save bilingual viewport screenshots
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
         if: always()
-        uses: actions/upload-artifact@v4
         with:
-          name: petsupply-v0.1-viewport-evidence
+          name: bilingual-home-site-evidence
           path: artifacts/
-          if-no-files-found: ignore
           retention-days: 30
